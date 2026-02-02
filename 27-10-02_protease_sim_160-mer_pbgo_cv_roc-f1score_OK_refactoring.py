@@ -119,29 +119,31 @@ Noc_list = ["N", "Q", "S", "T", "Y"]
 Nonp_list = ["A", "G", "V", "L", "I", "P", "F", "M", "W", "C"]
 
 def main():
-    trim_num = 50
+    trim_num = 160
     cur = con_db()
     merops_code_mece = create_merops_code_table()
     print("merops_code_mece.")
     #print(merops_code_mece)
     print(len(merops_code_mece))
-    n_mer = 50#16
+    n_mer = 160#16
     
     #for k, protease in enumerate(merops_code_mece[124:]):
     #k_start=195
     #l = k_start
     #for k in range(k_start, len(merops_code_mece), 1):
     #for k, protease in enumerate(['S01.047', 'S01.021', 'S01.247', 'S01.034', 'S01.087']): 
-    protease_num_dic = {'S01.247': 566}
-    for i, protease in enumerate(['S01.247']): 
+    protease_num_dic = {'S01.247': 566, 'S08.071': 741}
+    #for i, protease in enumerate(['S01.247']): 
     #for k, protease in enumerate(['A01.003']): 
+    for i, protease in enumerate(['S08.071']): 
         #k = 2
         
-        i = i + protease_num_dic['S01.247']
+        #i = i + protease_num_dic['S01.247']
+        i = i + protease_num_dic['S08.071']
         print("i: {}".format(i))
         # l = k
         # 作成したいディレクトリのパス
-        dir_path = "./outputdir_rf_reg_priority/{}_{}".format(i, protease)
+        dir_path = "./outputdir_rf_reg_priority/pbgo/{}_{}".format(i, protease)
         # ディレクトリが存在しなければ作成する
         os.makedirs(dir_path, exist_ok=True)
 
@@ -184,7 +186,7 @@ def main():
             seqs02.iloc[j] = seqs02.iloc[j].replace('-', '')
             #seqs02.iloc[i, 'cleave_pattern'] = seqs02.iloc[i, 'cleave_pattern'].str.replace('-', '')
         
-        batch_size = 1
+        batch_size = 4#1
         model02 = get_model_with_hidden_layers_as_outputs(pretrained_model_generator02.create_model(seq_len02))
         print("model02.")
         print(model02)
@@ -226,7 +228,7 @@ def main():
             #    break
             if j == len(seqs03)-1:
                 print("There are no problem.")
-        batch_size = 1
+        # batch_size = 1
         model03 = get_model_with_hidden_layers_as_outputs(pretrained_model_generator03.create_model(seq_len03))
         #print("model03.")
         #print(model03)
@@ -291,6 +293,9 @@ def main():
         #print(filename_main)
         # save_filename = './learning_data_matrix/' + filename_main[0]
         #print(f"save_filename: {save_filename}")
+
+
+        # create positive data
         print('cleave_pattern01.')
         print(cleave_pattern01)
         df_test = char2vec(cleave_pattern01, n_mer)
@@ -356,7 +361,14 @@ def main():
         #print(df_concat_pb_seq.index) 
         #print(df_concat_pb_seq)
         #print(df_concat_pb_seq.shape)
+        df_concat_pb_go = df_concat_pb_go.drop(index='{}'.format(uniprot_id01+'+'))
 
+
+
+
+
+
+        # create negative data
         df_concat_negative = pd.DataFrame([test_array], index=['{}'.format(uniprot_id01+'+')])
         df_concat_negative['label'] = 0 
         #print("df_concat_negative.")
@@ -564,6 +576,20 @@ def main():
         print('Cross-validation scores: \n{}'.format(cvs))
 
         X = x_data
+        print("X: ")
+        print(len(X))
+        y = y_data
+        # X_seq = pd.concat([df_positive['cleave_pattern'], df_negative['negative_pattern']], axis=0) 
+        X_seq = pd.concat([df_positive['cleave_pattern'], df_negative['negative_pattern']], ignore_index=True) 
+        print("len of df_positive: {}".format(len(df_positive)))
+        print("len of df_negative: {}".format(len(df_negative)))
+        
+        print("X_seq: ")
+        print(X_seq)
+        print(type(X_seq))
+        X_seq_list = X_seq.tolist()
+        print(X_seq_list)
+        print(len(X_seq_list))
         y = y_data
         X_seq = pd.concat([df_positive['cleave_pattern'], df_negative['negative_pattern']], axis=0) 
 
@@ -577,18 +603,38 @@ def main():
         #print(stratifiedKFold.split(X, y))
 
         m = 0
-        roc_cv_list = []
-        x_train_list = []
-        y_train_list = []
-        x_val_list = []
-        y_val_list = []
+
         for train_index, test_index in stratifiedKFold.split(X, y):
+            roc_cv_list = []
+            x_train_list = []
+            y_train_list = []
+            x_val_list = []
+            y_val_list = []
+            x_train_seq_list = []
+            x_val_seq_list = []
+
+
             X_train, X_test = X[train_index], X[test_index]
             print("train_index: ")
             print(train_index)
+            print(len(train_index))
             print("test_index: ")
             print(test_index)
-            X_train_seq, X_test_seq = X_seq.iloc[train_index[0]: train_index[1], 0], X_seq[test_index[0]: test_index[1], 0]
+            print(len(test_index))
+            #X_train_seq, X_test_seq = X_seq.iloc[train_index[0]: train_index[1], 0], X_seq[test_index[0]: test_index[1], 0]
+            
+            
+            print("#"*10 + "make x_train_seq_list" "#"*10)
+            for j in range(len(train_index)):
+                print("train_index[{}]: {}".format(j, train_index[j]))
+                x_train_seq_list.append(X_seq_list[train_index[j]])
+
+            print("#"*10 + "make x_val_seq_list" "#"*10)
+            for j in range(len(test_index)):
+                print("test_index[{}]: {}".format(j, test_index[j]))
+                x_val_seq_list.append(X_seq_list[test_index[j]])
+
+            
             y_train, y_test = y[train_index], y[test_index]
             X_train = X_train.tolist()
             X_test = X_test.tolist()
@@ -612,12 +658,13 @@ def main():
             print("y_test: ")
             print(y_test)
             print(len(y_test))
+
             df_train = pd.DataFrame({
-                'X_train': X_train_seq, 
+                'X_train': x_train_seq_list, 
                 'y_train': y_train
             }).to_csv("./outputdir_rf_reg_priority/{}_{}/df_train{}_cv{}.csv".format(i, protease, protease, m))
             df_test = pd.DataFrame({
-                'X_test': X_test_seq,  
+                'X_test': x_val_seq_list,  
                 'y_test': y_test
             }).to_csv("./outputdir_rf_reg_priority/{}_{}/df_test{}_cv{}.csv".format(i, protease, protease, m))
 
@@ -778,14 +825,14 @@ def main():
             'precision_score': [precision_value], 
             'recall_score': [recall_value], 
             'accuracy_value': [accuracy_value]
-        }).to_csv('./outputdir_rf_reg_priority/{}_{}/roc_auc_f1score_{}_selectedLearningData.csv'.format(i, protease, protease))
+        }).to_csv('./outputdir_rf_reg_priority/{}_{}/roc_auc_f1score_{}_selectedLearningData_roc-index{}.csv'.format(i, protease, protease, roc_index))
         
         plt.plot(fpr, tpr, marker='o')
         plt.xlabel('FPR: False positive rate')
         plt.ylabel('TPR: True positive rate')
         plt.title('ROC_{}'.format(protease))
         plt.grid()
-        plt.savefig('./outputdir_rf_reg_priority/{}_{}/roc_curve_{}_selectedLearningData.png'.format(i, protease, protease))
+        plt.savefig('./outputdir_rf_reg_priority/{}_{}/roc_curve_{}_selectedLearningData_roc-index{}.png'.format(i, protease, protease, roc_index))
         
 
         print("predicteds: ")
@@ -798,7 +845,7 @@ def main():
         df_val_predicteds = pd.DataFrame(predicteds, columns=["predicteds_val"], index=list(range(len(predicteds))))
         #df_val_predicteds = pd.DataFrame([y_val, predicteds], columns=["y_val", "val_predict"], index=list(range(len(predicteds))))
         df_val_predicteds = pd.concat([df_y_val, df_val_predicteds], axis=1)
-        df_val_predicteds.to_csv("./outputdir_rf_reg_priority/{}_{}/df_val_predicteds_{}_fixLearningData.csv".format(i, protease, protease))
+        df_val_predicteds.to_csv("./outputdir_rf_reg_priority/{}_{}/df_val_predicteds_{}_fixLearningData_roc-index{}.csv".format(i, protease, protease, roc_index))
         
         # 精度検証
         mae = mean_absolute_error(y_true, y_score)
@@ -807,7 +854,7 @@ def main():
         print("mse: {}".format(mse))
         df_val_error = pd.DataFrame([[mae, mse]], columns=["val_mae", "val_mse"], index=["0"])
         #df_val_error = pd.DataFrame([[mae], [mse]], columns=["0"], index=["val_mae", "val_mse"])
-        df_val_error.to_csv("./outputdir_rf_reg_priority/{}_{}/df_val_error_{}_fixLearningData.csv".format(i, protease, protease))
+        df_val_error.to_csv("./outputdir_rf_reg_priority/{}_{}/df_val_error_{}_fixLearningData_roc-index{}.csv".format(i, protease, protease, roc_index))
 
         #plot_decision_regions(x_combined, y_combined, classifier=forest)
         #plt.xlabel('petal length[cm]')
@@ -822,7 +869,7 @@ def main():
 
         pretrained_model_generator, input_encoder = load_pretrained_model()
         origin_fullseq = "MFVFLVLLPLVSSQCVNLTTRTQLPPAYTNSFTRGVYYPDKVFRSSVLHSTQDLFLPFFSNVTWFHAIHVSGTNGTKRFDNPVLPFNDGVYFASTEKSNIIRGWIFGTTLDSKTQSLLIVNNATNVVIKVCEFQFCNDPFLGVYYHKNNKSWMESEFRVYSSANNCTFEYVSQPFLMDLEGKQGNFKNLREFVFKNIDGYFKIYSKHTPINLVRDLPQGFSALEPLVDLPIGINITRFQTLLALHRSYLTPGDSSSGWTAGAAAYYVGYLQPRTFLLKYNENGTITDAVDCALDPLSETKCTLKSFTVEKGIYQTSNFRVQPTESIVRFPNITNLCPFGEVFNATRFASVYAWNRKRISNCVADYSVLYNSASFSTFKCYGVSPTKLNDLCFTNVYADSFVIRGDEVRQIAPGQTGKIADYNYKLPDDFTGCVIAWNSNNLDSKVGGNYNYLYRLFRKSNLKPFERDISTEIYQAGSTPCNGVEGFNCYFPLQSYGFQPTNGVGYQPYRVVVLSFELLHAPATVCGPKKSTNLVKNKCVNFNFNGLTGTGVLTESNKKFLPFQQFGRDIADTTDAVRDPQTLEILDITPCSFGGVSVITPGTNTSNQVAVLYQDVNCTEVPVAIHADQLTPTWRVYSTGSNVFQTRAGCLIGAEHVNNSYECDIPIGAGICASYQTQTNSPRRARSVASQSIIAYTMSLGAENSVAYSNNSIAIPTNFTISVTTEILPVSMTKTSVDCTMYICGDSTECSNLLLQYGSFCTQLNRALTGIAVEQDKNTQEVFAQVKQIYKTPPIKDFGGFNFSQILPDPSKPSKRSFIEDLLFNKVTLADAGFIKQYGDCLGDIAARDLICAQKFNGLTVLPPLLTDEMIAQYTSALLAGTITSGWTFGAGAALQIPFAMQMAYRFNGIGVTQNVLYENQKLIANQFNSAIGKIQDSLSSTASALGKLQDVVNQNAQALNTLVKQLSSNFGAISSVLNDILSRLDKVEAEVQIDRLITGRLQSLQTYVTQQLIRAAEIRASANLAATKMSECVLGQSKRVDFCGKGYHLMSFPQSAPHGVVFLHVTYVPAQEKNFTTAPAICHDGKAHFPREGVFVSNGTHWFVTQRNFYEPQIITTDNTFVSGNCDVVIGIVNNTVYDPLQPELDSFKEELDKYFKNHTSPDVDLGDISGINASVVNIQKEIDRLNEVAKNLNESLIDLQELGKYEQYIKWPWYIWLGFIAGLIAIVMVTIMLCCMTSCCSCLKGCCSCGSCCKFDEDDSEPVLKGVKLHYT"
-        for j in range(7):
+        for j in range(8):
             if j == 0:
                 fullseq = origin_fullseq
                 mutation_name = "origin"
@@ -839,9 +886,12 @@ def main():
                 fullseq = test_data_gen_delta()
                 mutation_name = "delta"
             elif j == 5:
+                fullseq = test_data_gen_omicron()
+                mutation_name = "omicron"
+            elif j == 6:
                 fullseq = test_data_gen_omicron_ba1()
                 mutation_name = "omicron_ba1"
-            elif j == 6:
+            elif j == 7:
                 fullseq = test_data_gen_omicron_ba2()
                 mutation_name = "omicron_ba2"
             """
@@ -886,7 +936,7 @@ def main():
 
             #print("seq_len")
             #print(seq_len)
-            batch_size = 1
+            # batch_size = 1
             model = get_model_with_hidden_layers_as_outputs(pretrained_model_generator.create_model(seq_len))
             #print("model.")
             #print(model)
@@ -975,7 +1025,7 @@ def main():
 
 
 
-
+"""
 def con_db():
     # コネクションの作成
     conn = mydb.connect(
@@ -992,7 +1042,23 @@ def con_db():
     # DB操作用にカーソルを作成
     cur = conn.cursor()
     return cur
+"""
+def con_db():
+    # コネクションの作成
+    conn = mydb.connect(
+        host='localhost',
+        port=3306,
+        user='root',
+        #password='miyazakilab',
+        password='KtHk23#8', 
+        #database='meropsrefs01'
+        #database='meropsweb12_1'
+        database='meropsweb121'
+    )
 
+    # DB操作用にカーソルを作成
+    cur = conn.cursor()
+    return cur
 
 def plot_decision_regions(X, y, classifier, test_idx=None, resolution=0.02):
     #setup marker generator and color map
@@ -1430,6 +1496,10 @@ def test_data_gen_delta():
             gap_count += 1
     fullseq_mutation = "".join(fullseq_list)
     fullseq_mutation = 'MFVFLVLLPLVSSQCVNLRTRTQLPPAYTNSFTRGVYYPDKVFRSSVLHSTQDLFLPFFSNVTWFHAIHVSGTNGTKRFDNPVLPFNDGVYFASIEKSNIIRGWIFGTTLDSKTQSLLIVNNATNVVIKVCEFQFCNDPFLDVYYHKNNKSWMESGVYSSANNCTFEYVSQPFLMDLEVKQGNFKNLREFVFKNIDGYFKIYSKHTPINLVRDLPQGFSALEPLVDLPIGINITRFQTLLALHRSYLTPGDSSSGWTAGAAAYYVGYLQPRTFLLKYNENGTITDAVDCALDPLSETKCTLKSFTVEKGIYQTSNFRVQPTESIVRFPNITNLCPFGEVFNATRFASVYAWNRKRISNCVADYSVLYNSASFSTFKCYGVSPTKLNDLCFTNVYADSFVIRGDEVRQIAPGQTGKIADYNYKLPDDFTGCVIAWNSNNLDSKVGGNYNYRYRLFRKSNLKPFERDISTEIYQAGSKPCNGVEGFNCYFPLQSYGFQPTNGVGYQPYRVVVLSFELLHAPATVCGPKKSTNLVKNKCVNFNFNGLTGTGVLTESNKKFLPFQQFGRDIADTTDAVRDPQTLEILDITPCSFGGVSVITPGTNTSNQVAVLYQGVNCTEVPVAIHADQLTPTWRVYSTGSNVFQTRAGCLIGAEHVNNSYECDIPIGAGICASYQTQTNSRRRARSVASQSIIAYTMSLGAENSVAYSNNSIAIPTNFTISVTTEILPVSMTKTSVDCTMYICGDSTECSNLLLQYGSFCTQLNRALTGIAVEQDKNTQEVFAQVKQIYKTPPIKDFGGFNFSQILPDPSKPSKRSFIEDLLFNKVTLADAGFIKQYGDCLGDIAARDLICAQKFNGLTVLPPLLTDEMIAQYTSALLAGTITSGWTFGAGAALQIPFAMQMAYRFNGIGVTQNVLYENQKLIANQFNSAIGKIQDSLSSTASALGKLQNVVNQNAQALNTLVKQLSSNFGAISSVLNDILSRLDKVEAEVQIDRLITGRLQSLQTYVTQQLIRAAEIRASANLAATKMSECVLGQSKRVDFCGKGYHLMSFPQSAPHGVVFLHVTYVPAQEKNFTTAPAICHDGKAHFPREGVFVSNGTHWFLTQRNFYEPQTITTDNTFVSGNCDVVIGIVNNTVYDPLQPELDSFKEELDKYFKNHTSPDVDLGDISGINASVVNIQKEIDRLNEVAKNLNESLIDLQELGKYEQYIKWPWYIWLGFIAGLIAIVMVTIMLCCMTSCCSCLKGCCSCGSCCKFDEDDSEPVLKGVKLHYT'
+    return fullseq_mutation
+
+def test_data_gen_omicron():
+    fullseq_mutation = "MFVFLVLLPLVSSQCVNLTTRTQLPPAYTNSFTRGVYYPDKVFRSSVLHSTQDLFLPFFSNVTWFHAIHVSGTNGTKRFDNPVLPFNDGVYFASTEKSNIIRGWIFGTTLDSKTQSLLIVNNATNVVIKVCEFQFCNDPFLGVYYHKNNKSWMESEFRVYSSANNCTFEYVSQPFLMDLEGKQGNFKNLREFVFKNIDGYFKIYSKHTPINLVRDLPQGFSALEPLVDLPIGINITRFQTLLALHRSYLTPGDSSSGWTAGAAAYYVGYLQPRTFLLKYNENGTITDAVDCALDPLSETKCTLKSFTVEKGIYQTSNFRVQPTESIVRFPNITNLCPFDEVFNATRFASVYAWNRKRISNCVADYSVLYNSASFSTFKCYGVSPTKLNDLCFTNVYADSFVFRGDEVRQIAPGQTGKIADYNYKLPDDFTGCVIAWNSNNLDSKVGGNYNYLYRLFRKSNLKPFERDISTEIYQAGSTPCNGVEGVNCYFPLQSYGFQPTYGVGYQPYRVVVLSFELLHAPATVCGPKKSTNLVKNKCVNFNFNGLTGTGVLTESNKKFLPFQQFGRDIADTTDAVRDPQTLEILDITPCSFGGVSVITPGTNTSNQVAVLYQGVNCTEVPVAIHADQLTPTWRVYSTGSNVFQTRAGCLIGAEYVNNSYECDIPIGAGICASYQTQTKSHRRARSVASQSIIAYTMSLGAENSVAYSNNSIAIPTNFTISVTTEILPVSMTKTSVDCTMYICGDSTECSNLLLQYGSFCTQLNRALTGIAVEQDKNTQEVFAQVKQIYKTPPIKDFGGFNFSQILPDPSKPSKRSFIEDLLFNKVTLADAGFIKQYGDCLGDIAARDLICAQKFNGLTVLPPLLTDEMIAQYTSALLAGTITSGWTFGAGAALQIPFAMQMAYRFNGIGVTQNVLYENQKLIANQFNSAIGKIQDSLSSTASALGKLQDVVNHNAQALNTLVKQLSSKFGAISSVLNDILSRLDKVEAEVQIDRLITGRLQSLQTYVTQQLIRAAEIRASANLAATKMSECVLGQSKRVDFCGKGYHLMSFPQSAPHGVVFLHVTYVPAQEKNFTTAPAICHDGKAHFPREGVFVSNGTHWFVTQRNFYEPQIITTDNTFVSGNCDVVIGIVNNTVYDPLQPELDSFKEELDKYFKNHTSPDVDLGDISGINASVVNIQKEIDRLNEVAKNLNESLIDLQELGKYEQYIKWPWYIWLGFIAGLIAIVMVTIMLCCMTSCCSCLKGCCSCGSCCKFDEDDSEPVLKGVKLHYT"
     return fullseq_mutation
 
 def test_data_gen_omicron_ba1():
