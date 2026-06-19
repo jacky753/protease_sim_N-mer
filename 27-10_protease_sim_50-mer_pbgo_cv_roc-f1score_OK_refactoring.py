@@ -981,18 +981,13 @@ def con_db():
     conn = mydb.connect(
         host='localhost',
         port=3306,
-        user='root',
-        password='miyazakilab',
-        #password='KtHk23#8', 
-        #database='meropsrefs01'
+        user='hoge',
+        password='foo',
         database='meropsweb12_1'
-        #database='meropsweb121'
     )
-
     # DB操作用にカーソルを作成
     cur = conn.cursor()
     return cur
-
 
 def plot_decision_regions(X, y, classifier, test_idx=None, resolution=0.02):
     #setup marker generator and color map
