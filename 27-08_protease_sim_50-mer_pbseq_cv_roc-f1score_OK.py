@@ -919,12 +919,9 @@ def con_db():
     conn = mydb.connect(
         host='localhost',
         port=3306,
-        user='root',
-        password='miyazakilab',
-        #password='KtHk23#8', 
-        #database='meropsrefs01'
+        user='hoge',
+        password='foo',
         database='meropsweb12_1'
-        #database='meropsweb121'
     )
 
     # DB操作用にカーソルを作成
