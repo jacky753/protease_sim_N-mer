@@ -857,38 +857,15 @@ def main():
             df_concat_predict_seqs = pd.concat([df_predict, seqs], axis=1)
             df_concat_predict_seqs.to_csv("./outputdir_rf_reg_priority/pbseq/{}_{}/predict_sprotein_seqs_{}_{}.csv".format(i, protease, protease, mutation_name))
 
-"""
 def con_db():
     # コネクションの作成
     conn = mydb.connect(
         host='localhost',
         port=3306,
-        user='root',
-        password='miyazakilab',
-        #password='KtHk23#8', 
-        #database='meropsrefs01'
-        database='meropsweb12_1'
-        #database='meropsweb121'
-    )
-
-    # DB操作用にカーソルを作成
-    cur = conn.cursor()
-    return cur
-"""
-def con_db():
-    # コネクションの作成
-    conn = mydb.connect(
-        host='localhost',
-        port=3306,
-        user='root',
-        #password='miyazakilab',
-        #password='KtHk23#8', 
-        password='QuNr#he',
-        #database='meropsrefs01'
-        #database='meropsweb12_1'
+        user='foo',
+        password='bar',
         database='meropsweb121'
     )
-
     # DB操作用にカーソルを作成
     cur = conn.cursor()
     return cur
